@@ -1,0 +1,158 @@
+import { useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../firebaseConfig";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import "./LoginPage.css";
+
+export default function LoginPage() {
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email = "Enter a valid email";
+
+    if (!formData.password) newErrors.password = "Password is required";
+
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      return setErrors(newErrors);
+    }
+
+    try {
+      setIsLoading(true);
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      console.log("User:", userCredential.user);
+
+      navigate("/analyze");
+    } catch (err) {
+      console.error(err);
+      setErrors({ general: "Invalid email or password" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-box">
+
+        {/* Header */}
+        <div className="login-header">
+          <div className="login-icon">
+            <User size={28} />
+          </div>
+          <h1 className="login-title">Welcome Back</h1>
+          <p className="login-subtitle">Login to continue</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+
+          {/* General Error */}
+          {errors.general && (
+            <p className="error-text">{errors.general}</p>
+          )}
+
+          {/* Email */}
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <div className="input-wrapper">
+              <Mail className="input-icon" />
+              <input
+                type="email"
+                name="email"
+                className="form-input"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
+            {errors.email && (
+              <p className="error-text">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Password */}
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div className="input-wrapper">
+              <Lock className="input-icon" />
+
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                className="form-input"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+              />
+
+              <span
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </span>
+            </div>
+
+            {errors.password && (
+              <p className="error-text">{errors.password}</p>
+            )}
+          </div>
+
+          {/* Button */}
+          <button className="submit-btn" disabled={isLoading}>
+            {isLoading ? (
+              <div className="loading">
+                <div className="spinner"></div>
+                Signing in...
+              </div>
+            ) : (
+              "Login"
+            )}
+          </button>
+
+          {/* Footer */}
+          <div className="login-footer">
+            <p>
+              Don’t have an account?{" "}
+              <Link to="/signup" className="signup-link">
+                Sign up
+              </Link>
+            </p>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  );
+}
